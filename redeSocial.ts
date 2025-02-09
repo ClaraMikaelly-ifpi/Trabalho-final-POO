@@ -1,30 +1,30 @@
-import {Perfil, PerfilAvancado, Publicacao, PublicacaoAvancada, Interacao, TipoInteracao} from './perfil';
-import {PerfilJaCadastradoError, PerfilNaoAutorizadoError, PerfilInativoError, AmizadeJaExistenteError} from './excecoes';
-
+import { Perfil, PerfilAvancado, Publicacao, PublicacaoAvancada, Interacao, TipoInteracao } from './perfil';
+import { PerfilJaCadastradoError, PerfilNaoAutorizadoError, PerfilInativoError, AmizadeJaExistenteError } from './excecoes';
+import { RedeSocialInterativa } from './interacao';
 export class RedeSocial {
-    private perfis: Perfil[];
-    private publicacoes: Publicacao[];
-    private solicitacoesAmizade: Map<Perfil, Perfil>;
+    private _perfis: Perfil[];
+    private _publicacoes: Publicacao[];
+    private _solicitacoesAmizade: Map<Perfil, Perfil>;
 
     constructor() {
-        this.perfis = [];
-        this.publicacoes = [];
-        this.solicitacoesAmizade = new Map<Perfil, Perfil>();
+        this._perfis = [];
+        this._publicacoes = [];
+        this._solicitacoesAmizade = new Map<Perfil, Perfil>();
     }
 
     adicionarPerfil(perfil: Perfil): void {
-        if (this.perfis.find(p => p['id'] === perfil['id'] || p['email'] === perfil['email'])) {
+        if (this._perfis.find(p => p['id'] === perfil['id'] || p['email'] === perfil['email'])) {
             throw new PerfilJaCadastradoError('Perfil com ID ou email duplicado.');
         }
-         this.perfis.push(perfil);
+        this._perfis.push(perfil);
     }
 
     buscarPerfil(id?: string, apelido?: string, email?: string): Perfil | null {
-        return this.perfis.find(perfil => perfil['id'] === id || perfil['apelido'] === apelido || perfil['email'] === email) || null;
+        return this._perfis.find(perfil => perfil['id'] === id || perfil['apelido'] === apelido || perfil['email'] === email) || null;
     }
 
     listarPerfis(): Perfil[] {
-        return this.perfis;
+        return this._perfis;
     }
 
     ativarDesativarPerfil(perfilAvancado: PerfilAvancado, perfil: Perfil): void {
@@ -39,33 +39,32 @@ export class RedeSocial {
         if (perfil['status'] === 'inativo') {
             throw new PerfilInativoError('Perfis inativos não podem criar publicações.');
         }
-        this.publicacoes.push(publicacao);
+        this._publicacoes.push(publicacao);
     }
 
     listarPublicacoes(): Publicacao[] {
-        return this.publicacoes.sort((a, b) => b['dataHora'].getTime() - a['dataHora'].getTime());
+        return this._publicacoes.sort((a, b) => b['dataHora'].getTime() - a['dataHora'].getTime());
     }
 
     enviarSolicitacaoAmizade(perfilRemetente: Perfil, perfilDestinatario: Perfil): void {
         if (perfilRemetente.listarAmigos().includes(perfilDestinatario)) {
             throw new AmizadeJaExistenteError('Os perfis já são amigos.');
         }
-        this.solicitacoesAmizade.set(perfilDestinatario, perfilRemetente);
+        this._solicitacoesAmizade.set(perfilDestinatario, perfilRemetente);
     }
-
     aceitarSolicitacao(perfilDestinatario: Perfil): void {
-        const perfilRemetente = this.solicitacoesAmizade.get(perfilDestinatario);
+        const perfilRemetente = this._solicitacoesAmizade.get(perfilDestinatario);
         if (perfilRemetente) {
             if (perfilDestinatario.listarAmigos().includes(perfilRemetente)) {
                 throw new AmizadeJaExistenteError('Os perfis já são amigos.');
             }
             perfilDestinatario.adicionarAmigo(perfilRemetente);
             perfilRemetente.adicionarAmigo(perfilDestinatario);
-            this.solicitacoesAmizade.delete(perfilDestinatario);
+            this._solicitacoesAmizade.delete(perfilDestinatario);
         }
     }
 
     recusarSolicitacao(perfilDestinatario: Perfil): void {
-        this.solicitacoesAmizade.delete(perfilDestinatario);
+        this._solicitacoesAmizade.delete(perfilDestinatario);
     }
 }
