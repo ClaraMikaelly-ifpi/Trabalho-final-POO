@@ -1,7 +1,8 @@
 import * as readline from 'readline';
 import { RedeSocial } from './redeSocial';
 import { Perfil, PerfilAvancado, Publicacao } from './perfil';
-
+import { AmizadeJaExistenteError, PerfilInativoError, PerfilJaCadastradoError, PerfilNaoAutorizadoError } from './excecoes';
+import { PersistenciaDeDados } from './persistenciaDados';
 export class RedeSocialInterativa {
     private redeSocial: RedeSocial;
     private rl: readline.Interface;
@@ -51,7 +52,9 @@ export class RedeSocialInterativa {
         console.log('1. Adicionar Perfil');
         console.log('2. Listar Perfis');
         console.log('3. Ativar/Desativar Perfil');
-        console.log('4. Voltar ao Menu Principal');
+        console.log('4. Salvar')
+        console.log('5. Recuperar')
+        console.log('6. Voltar ao Menu Principal');
         this.rl.question('Escolha uma opção: ', (opcao) => {
             switch (opcao) {
                 case '1':
@@ -64,6 +67,12 @@ export class RedeSocialInterativa {
                     this.ativarDesativarPerfil();
                     break;
                 case '4':
+                    this.salvarPerfis();
+                    break;
+                case '5':
+                    this.recuperarPerfis();
+                    break;
+                case '6':
                     this.menuPrincipal();
                     break;
                 default:
@@ -81,9 +90,18 @@ export class RedeSocialInterativa {
                 this.rl.question('Foto (emoji): ', (foto) => {
                     this.rl.question('Email: ', (email) => {
                         const perfil = new Perfil(id, apelido, foto, email);
-                        this.redeSocial.adicionarPerfil(perfil);
-                        console.log('Perfil adicionado com sucesso!');
-                        this.menuPerfis();
+                        try {
+                            this.redeSocial.adicionarPerfil(perfil);
+                            console.log('Perfil adicionado com sucesso!');
+                            this.menuPerfis();
+                        } catch (erro) {
+                            if (erro instanceof PerfilJaCadastradoError) {
+                                this.menuSolicitacoes();
+                            } else {
+                                console.error("Ocorreu um erro desconhecido!")
+                                this.menuSolicitacoes();
+                            }
+                        }
                     });
                 });
             });
@@ -103,19 +121,51 @@ export class RedeSocialInterativa {
             if (perfilAvancado) {
                 this.rl.question('Email do perfil a ser ativado/desativado: ', (email) => {
                     const perfil = this.redeSocial.buscarPerfil(undefined, undefined, email);
-                    if (perfil) {
-                        this.redeSocial.ativarDesativarPerfil(perfilAvancado, perfil);
-                        console.log('Perfil ativado/desativado com sucesso!');
-                    } else {
-                        console.log('Perfil não encontrado.');
+                    try {
+                        if (perfil) {
+                            this.redeSocial.ativarDesativarPerfil(perfilAvancado, perfil);
+                            console.log('Perfil ativado/desativado com sucesso!');
+                            this.menuPerfis();
+                        } else {
+                            console.error("Perfil não encontado")
+                            this.menuPerfis();
+                        }
+                    } catch (erro) {
+                        if (erro instanceof PerfilInativoError) {
+                            this.menuSolicitacoes();
+                        } else {
+                            console.error("Ocorreu um erro desconhecido!")
+                            this.menuSolicitacoes();
+                        }
                     }
-                    this.menuPerfis();
                 });
             } else {
-                console.log('Perfil não encontrado ou não autorizado.');
+                console.error('Perfil não encontrado ou não autorizado.');
                 this.menuPerfis();
             }
         });
+    }
+
+    private salvarPerfis(): void{
+        try{
+        PersistenciaDeDados.salvarPerfis(this.redeSocial.listarPerfis())
+        console.log("Sucesso.")
+        this.menuPerfis();
+        }catch(erro){
+            console.error("Erro ao salvar perfis.")
+            this.menuPerfis()
+        }
+    }
+
+    private recuperarPerfis(): void{
+        try{
+            PersistenciaDeDados.recuperarPerfis();
+            console.log("Sucesso.");
+            this.menuPerfis();
+            }catch(erro){
+                console.error("Erro ao recuperar perfis.");
+                this.menuPerfis();
+            }
     }
 
     // Métodos do menuPublicacoes
@@ -123,7 +173,9 @@ export class RedeSocialInterativa {
         console.log('\n--- Gerenciamento de Publicações ---');
         console.log('1. Adicionar Publicação');
         console.log('2. Listar Publicações');
-        console.log('3. Voltar ao Menu Principal');
+        console.log('3. Salvar');
+        console.log('4. Recuperar');
+        console.log('Voltar ao menu principal');
         this.rl.question('Escolha uma opção: ', (opcao) => {
             switch (opcao) {
                 case '1':
@@ -133,6 +185,12 @@ export class RedeSocialInterativa {
                     this.listarPublicacoes();
                     break;
                 case '3':
+                    this.salvarPublicacoes();
+                    break;
+                case '4':
+                    this.recuperarPublicacoes();
+                    break;
+                case '5':
                     this.menuPrincipal();
                     break;
                 default:
@@ -144,15 +202,24 @@ export class RedeSocialInterativa {
     }
 
     private adicionarPublicacao(): void {
-        this.rl.question('Apelido do perfil: ', (apelido) => {
+        this.rl.question('Email do perfil: ', (apelido) => {
             const perfil = this.redeSocial.buscarPerfil(undefined, undefined, apelido);
             if (perfil) {
-                this.rl.question('Conteúdo: ', (conteudo) => {
-                    const publicacao = new Publicacao(Date.now().toString(), conteudo, perfil);
-                    this.redeSocial.adicionarPublicacao(publicacao);
-                    console.log('Publicação adicionada com sucesso!');
-                    this.menuPublicacoes();
-                });
+                try {
+                    this.rl.question('Conteúdo: ', (conteudo) => {
+                        const publicacao = new Publicacao(Date.now().toString(), conteudo, perfil);
+                        this.redeSocial.adicionarPublicacao(publicacao);
+                        console.log('Publicação adicionada com sucesso!');
+                        this.menuPublicacoes();
+                    });
+                } catch (erro) {
+                    if (erro instanceof PerfilInativoError) {
+                        this.menuSolicitacoes();
+                    } else {
+                        console.error("Ocorreu um erro desconhecido!")
+                        this.menuSolicitacoes();
+                    }
+                }
             } else {
                 console.log('Perfil não encontrado.');
                 this.menuPublicacoes();
@@ -163,17 +230,39 @@ export class RedeSocialInterativa {
     private listarPublicacoes(): void {
         const publicacoes = this.redeSocial.listarPublicacoes();
         console.log('\nPublicações:');
-        publicacoes.forEach(pub => console.log(`- [${pub['dataHora']}] ${pub['conteudo']}`));
+        publicacoes.forEach(pub => console.log(`${pub['perfil'].apelido_perfil}- Foto- ${pub['perfil'].perfil_foto}: [${pub['dataHora']}] ${pub['conteudo']}`));
         this.menuPublicacoes();
     }
 
+    private salvarPublicacoes(): void{
+        try{
+            PersistenciaDeDados.salvarPublicacoes(this.redeSocial.listarPublicacoes())
+            console.log("Sucesso.")
+            this.menuPerfis();
+            }catch(erro){
+                console.error("Erro ao salvar publicações.")
+                this.menuPerfis()
+            }
+    }
+
+    private recuperarPublicacoes(){
+        try{
+            PersistenciaDeDados.recuperarPerfis();
+            console.log("Sucesso.");
+            this.menuPerfis();
+            }catch(erro){
+                console.error("Erro ao recuperar publicações.");
+                this.menuPerfis();
+            }
+    }
     // Métodos do menuSolicitacoes
     private menuSolicitacoes(): void {
         console.log('\n--- Gerenciamento de Solicitações ---');
         console.log('1. Enviar Solicitação de Amizade');
         console.log('2. Aceitar Solicitação');
         console.log('3. Recusar Solicitação');
-        console.log('4. Voltar ao Menu Principal');
+        console.log('4. Listar amigos')
+        console.log('5. Voltar ao Menu Principal');
         this.rl.question('Escolha uma opção: ', (opcao) => {
             switch (opcao) {
                 case '1':
@@ -186,6 +275,9 @@ export class RedeSocialInterativa {
                     this.recusarSolicitacao();
                     break;
                 case '4':
+                    this.listarAmizades();
+                    break;
+                case '5':
                     this.menuPrincipal();
                     break;
                 default:
@@ -203,7 +295,16 @@ export class RedeSocialInterativa {
                 this.rl.question('Email do perfil destinatário: ', (Email) => {
                     const perfilDestinatario = this.redeSocial.buscarPerfil(undefined, undefined, Email);
                     if (perfilDestinatario) {
-                        this.redeSocial.enviarSolicitacaoAmizade(perfilRemetente, perfilDestinatario);
+                        try {
+                            this.redeSocial.enviarSolicitacaoAmizade(perfilRemetente, perfilDestinatario);
+                        } catch (erro) {
+                            if (erro instanceof AmizadeJaExistenteError) {
+                                this.menuSolicitacoes();
+                            } else {
+                                console.error("Ocorreu um erro desconhecido!")
+                                this.menuSolicitacoes();
+                            }
+                        }
                         console.log('Solicitação de amizade enviada com sucesso!');
                     } else {
                         console.log('Perfil destinatário não encontrado.');
@@ -218,15 +319,50 @@ export class RedeSocialInterativa {
     }
 
     private aceitarSolicitacao(): void {
-        this.rl.question('Email do perfil destinatário: ', (Email) => {
-            const perfilDestinatario = this.redeSocial.buscarPerfil(undefined, undefined, Email);
+        this.rl.question('Email do perfil destinatário: ', (emailDestinatario) => {
+            const perfilDestinatario = this.redeSocial.buscarPerfil(undefined, undefined, emailDestinatario);
+    
             if (perfilDestinatario) {
-                this.redeSocial.aceitarSolicitacao(perfilDestinatario);
-                console.log('Solicitação de amizade aceita com sucesso!');
+                const solicitacoesPendentes = this.redeSocial.listarSolicitacoesPendentes(perfilDestinatario);
+    
+                if (solicitacoesPendentes.length === 0) {
+                    console.log('Não há solicitações de amizade pendentes.');
+                    this.menuSolicitacoes();
+                    return;
+                }
+    
+                console.log('\nSolicitações de amizade pendentes:');
+                solicitacoesPendentes.forEach((solicitacao, index) => {
+                    console.log(`${index + 1}. De: ${solicitacao.remetente.apelido_perfil} (${solicitacao.remetente.perfil_email})`);
+                });
+    
+                this.rl.question('Digite o número da solicitação que deseja aceitar: ', (numeroSolicitacao) => {
+                    const index = parseInt(numeroSolicitacao) - 1;
+    
+                    if (index >= 0 && index < solicitacoesPendentes.length) {
+                        const solicitacaoEscolhida = solicitacoesPendentes[index];
+    
+                        try {
+                            this.redeSocial.aceitarSolicitacaoEspecifica(perfilDestinatario, solicitacaoEscolhida.remetente);
+                            console.log('Solicitação de amizade aceita com sucesso!');
+                        } catch (erro) {
+                            if (erro instanceof AmizadeJaExistenteError) {
+                                console.log("Amizade já existe.");
+                            } else {
+                                console.error("Ocorreu um erro desconhecido!", erro);
+                            }
+                        } finally {
+                            this.menuSolicitacoes();
+                        }
+                    } else {
+                        console.log('Número de solicitação inválido.');
+                        this.menuSolicitacoes();
+                    }
+                });
             } else {
                 console.log('Perfil destinatário não encontrado.');
+                this.menuSolicitacoes();
             }
-            this.menuSolicitacoes();
         });
     }
 
@@ -234,13 +370,58 @@ export class RedeSocialInterativa {
         this.rl.question('Email do perfil destinatário: ', (Email) => {
             const perfilDestinatario = this.redeSocial.buscarPerfil(undefined, undefined, Email);
             if (perfilDestinatario) {
-                this.redeSocial.recusarSolicitacao(perfilDestinatario);
-                console.log('Solicitação de amizade recusada com sucesso!');
+                try {
+                    this.redeSocial.recusarSolicitacao(perfilDestinatario);
+                    console.log('Solicitação de amizade recusada com sucesso!');
+                } catch (erro) {
+                    if (erro instanceof AmizadeJaExistenteError) {
+                        this.menuSolicitacoes();
+                    } else {
+                        console.error("Ocorreu um erro desconhecido!")
+                        this.menuSolicitacoes();
+                    }
+                }
             } else {
                 console.log('Perfil destinatário não encontrado.');
             }
             this.menuSolicitacoes();
         });
     }
-}
 
+    private listarAmizades(): void {
+        try {
+          this.rl.question('Email do perfil: ', async (Email) => {
+            try {
+              const perfil = this.redeSocial.buscarPerfil(undefined, undefined, Email);
+              if (perfil) {
+                const lista: Perfil[] = perfil.listarAmigos();
+                if (lista && lista.length > 0) { // Verifica se a lista existe e não está vazia
+                  lista.forEach(amigo => { // Usa forEach para iterar sobre a lista
+                    if (amigo) { // Verifica se o amigo existe
+                      console.log(amigo.apelido_perfil);
+                    }
+                  });
+                } else {
+                  console.log("Este perfil não possui amigos.");
+                }
+              } else {
+                throw new PerfilInativoError("Perfil não encontrado."); 
+              }
+            } catch (erro) {
+              if (erro instanceof PerfilInativoError) {
+                console.error(erro.message); 
+              } else if (erro instanceof Error) { 
+                console.error(`Ocorreu um erro: ${erro.message}`); 
+              } else {
+                console.error("Ocorreu um erro desconhecido.");
+              }
+            } finally {
+              this.menuSolicitacoes();
+            }
+          });
+        } catch (erro) {
+          console.error("Erro na leitura do email."); 
+          this.menuSolicitacoes();
+        }
+      }
+    }

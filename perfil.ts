@@ -40,6 +40,20 @@ export class Perfil {
     ativarDesativarPerfil(): void {
         this.status = this.status === 'ativo' ? 'inativo' : 'ativo';
     }
+
+    get apelido_perfil(): string{
+        return this.apelido;
+    }
+    get perfil_foto(): string{
+        return this.foto;
+    }
+    get perfil_status(): string{
+        return this.status;
+    }
+
+    get perfil_email(): string{
+        return this.email;
+    }
 }
 
 export class PerfilAvancado extends Perfil {
@@ -60,6 +74,9 @@ export class Publicacao {
         this.conteudo = conteudo;
         this.dataHora = new Date();
         this.perfil = perfil;
+    }
+    get perfilApelido(): string{
+        return this.perfil.apelido_perfil;
     }
 }
 
