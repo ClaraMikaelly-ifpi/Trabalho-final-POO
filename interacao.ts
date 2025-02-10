@@ -148,7 +148,7 @@ export class RedeSocialInterativa {
                             this.menuPerfis();
                         }
                     } catch (erro) {
-                        if (erro instanceof PerfilInativoError) {
+                        if (erro instanceof PerfilNaoAutorizadoError) {
                             console.error(erro.message);
                         } else {
                             console.error("Ocorreu um erro desconhecido!");
