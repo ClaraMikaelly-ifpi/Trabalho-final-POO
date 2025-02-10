@@ -83,9 +83,11 @@ export class RedeSocial {
         const solicitacao = Array.from(this._solicitacoesAmizade.entries())[solicitacaoIndex];
         this._solicitacoesAmizade.delete(solicitacao[0]);
     }
+    
     listarSolicitacoes(): undefined | Map<Perfil, Perfil>{
         return this._solicitacoesAmizade;
     }
+
     ativarDesativarPerfil(perfilAvancado: PerfilAvancado, perfil: Perfil): void {
         if (!(perfilAvancado instanceof PerfilAvancado)) {
             throw new PerfilNaoAutorizadoError('Perfil não autorizado para ativar/desativar outro perfil.');
